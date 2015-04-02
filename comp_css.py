@@ -1,14 +1,43 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # Note this is a python3 application, python 2 will barf
+"""
+
+
+:Copyright: 2015 A. Lloyd Flanagan
+:Author: \\A. Lloyd Flanagan
+:Contact: a.lloyd.flanagan@gmail.com
+
+"""
+
+
 import sys
 import os
 from collections import defaultdict
 
 import tinycss
-from tinycss.css21 import Declaration
+import tinycss.color3
+from tinycss.css21 import Declaration, TokenList
 
 # pylint: disable=R0913,R0903
 # imho, pylint being rather dumb about those warnings
+
+
+def get_normalized_color(color):
+    """Given a valid string according to the color 3 specification, return the color value in
+    the form #xxxxxx, where each x is a lowercase hex digit.
+
+    :note: CSS 3 does not define a hex format that includes transparency, so transparency will
+        always be the default of 1.0 regarless of the transparency specified in `color`.
+
+    """
+    # transparency will likely be supported in CSS4: http://stackoverflow.com/questions/1419448/
+    rgb = tinycss.color3.parse_color_string(color)
+    return "#{}{}{}".format(
+        hex(int(rgb.red * 255))[2:3],
+        hex(int(rgb.blue * 255))[2:3],
+        hex(int(rgb.green * 255))[2:3]
+    )
 
 
 class FunctionalDeclaration(Declaration):
@@ -62,10 +91,25 @@ class FunctionalDeclaration(Declaration):
     def __eq__(self, other):
         # pylint: disable=W1504
         # I don't want to use instance() because I don't want child classes (if any) to be ==
+        # note we compare value.as_css() as there's no proper == for TokenList
         return (type(other) == type(self) and other.name == self.name and
-                other.value == self.value and other.priority == self.priority)
+                other.value.as_css() == self.value.as_css() and other.priority == self.priority)
+
+    def value_normalized(self):
+        """Attempt to normalize string values, so that they can be compared."""
+        # this, of course, should be a method on the self.value object
+        # TODO: should use tinycss.color3 to compare colors (?)
+        result = self.value.as_css()
+        assert self.value != "#FFFFFF"
+        if isinstance(result, tinycss.color3.RGBA):
+            result = get_normalized_color(result)
+        return result
 
     def __str__(self):
+        return "{0}: {1}{2}".format(
+            self.name, self.value_normalized(), " !" + self.priority if self.priority else '')
+
+    def __repr__(self):
         return "{0}: {1}{2}".format(
             self.name, self.value.as_css(), " !" + self.priority if self.priority else '')
 
@@ -174,6 +218,8 @@ class Stylesheet(object):
                 # so we keep a set of declarations over all the selector's rules
                 self_declarations = set()
                 other_declarations = set()
+                if selector == '#re-tabs li.on':
+                    print("found it")
                 for rule in self.selector_dict[selector]:
                     self_declarations.update([FunctionalDeclaration(decl) for decl
                                               in rule.declarations])
@@ -213,3 +259,10 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# Local Variables:
+# python-indent-offset: 4
+# fill-column: 100
+# indent-tabs-mode: nil
+# End:
