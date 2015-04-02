@@ -4,4 +4,13 @@
 # Wing IDE project file                                          #
 ##################################################################
 [project attributes]
+proj.directory-list = [{'dirloc': loc('.'),
+                        'excludes': (),
+                        'filter': u'*',
+                        'include_hidden': False,
+                        'recursive': True,
+                        'watch_for_changes': True}]
 proj.file-type = 'shared'
+proj.launch-config = {loc('comp_css.py'): ('project',
+        (u'site.css site-new.css',
+         ''))}
