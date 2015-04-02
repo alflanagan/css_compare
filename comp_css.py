@@ -5,7 +5,72 @@ import os
 from collections import defaultdict
 
 import tinycss
-from tinycss.css21 import RuleSet, TokenList, Declaration
+from tinycss.css21 import Declaration
+
+# pylint: disable=R0913,R0903
+# imho, pylint being rather dumb about those warnings
+
+
+class FunctionalDeclaration(Declaration):
+    """A wrapper for :py:class:`tinycss.css21.Declaration` that redefines equality to functional
+    equality (ignoring line and column values).
+
+    .. attribute:: name
+
+        The property name as a normalized (lower-case) string.
+
+    .. attribute:: value
+
+        The property value as a :class:`~.token_data.TokenList`.
+
+        The value is not parsed. UAs using tinycss may only support
+        some properties or some values and tinycss does not know which.
+        They need to parse values themselves and ignore declarations with
+        unknown or unsupported properties or values, and fall back
+        on any previous declaration.
+
+        :mod:`tinycss.color3` parses color values, but other values
+        will need specific parsing/validation code.
+
+    .. attribute:: priority
+
+        Either the string ``'important'`` or ``None``.
+
+    .. attribute:: line
+
+        The line number in the source file at which the declaration is found.
+
+    .. attribute:: column
+        The column in the source file at which the declaration is found (begins).
+
+    """
+    def __init__(self, name_or_obj, value=None, priority=None, line=None, column=None):
+        """
+        :param name_or_obj: Either the declaration's name (a :py:class:`str`), or the
+            :py:class:`~tinycss.css21.Declaration` instance to be wrapped.
+
+        :param str value: The declaration's value, ignored if name_or_obj is
+            :py:class:`~tinycss.css21.Declaration` instance.
+
+        """
+        if isinstance(name_or_obj, Declaration):
+            super().__init__(name_or_obj.name, name_or_obj.value, name_or_obj.priority,
+                             name_or_obj.line, name_or_obj.column)
+        else:
+            super().__init__(name_or_obj, value, priority, line, column)
+
+    def __eq__(self, other):
+        # pylint: disable=W1504
+        # I don't want to use instance() because I don't want child classes (if any) to be ==
+        return (type(other) == type(self) and other.name == self.name and
+                other.value == self.value and other.priority == self.priority)
+
+    def __str__(self):
+        return "{0}: {1}{2}".format(
+            self.name, self.value.as_css(), " !" + self.priority if self.priority else '')
+
+    def __hash__(self):
+        return hash(str(self))
 
 
 class Stylesheet(object):
@@ -90,7 +155,6 @@ class Stylesheet(object):
                 break
 
     def check_rules(self, other):
-        counter = 5
         for selector in self.selector_keys:
             if selector in other.selector_keys:
                 # we care whether the set of declarations for the selector is the same
@@ -111,14 +175,23 @@ class Stylesheet(object):
                 self_declarations = set()
                 other_declarations = set()
                 for rule in self.selector_dict[selector]:
-                    for decl in rule.declarations:
-                        print('{0.name}: {1}{2}'.format(
-                            decl,
-                            decl.value.as_css(),
-                            ' !' + decl.priority if decl.priority else ''))
-                        counter -= 1
-                        if counter <= 0:
-                            break
+                    self_declarations.update([FunctionalDeclaration(decl) for decl
+                                              in rule.declarations])
+                for rule in other.selector_dict[selector]:
+                    other_declarations.update([FunctionalDeclaration(decl) for decl
+                                               in rule.declarations])
+                missing = self_declarations - other_declarations
+                extra = other_declarations - self_declarations
+                if missing or extra:
+                    print("selector: {}".format(selector))
+                if missing:
+                    print("    found in {} but not {}:".format(self.filename, other.filename))
+                    for decl in missing:
+                        print("        {}".format(decl))
+                if extra:
+                    print("    found in {} but not {}:".format(other.filename, self.filename))
+                    for decl in extra:
+                        print("        {}".format(decl))
 
 
 def usage():
