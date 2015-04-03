@@ -199,6 +199,11 @@ class Stylesheet(object):
                 break
 
     def check_rules(self, other):
+        """Attempt to compare rules defined in this sheet against those in ``other``."""
+        # KNOWN PROBLEMS:
+        # equivalence of different representations of color codes: #CCC v. #cccccc
+        # equivalence of "shortcut" rules: margin: 5px; v. margin-bottom: 5px; margin-top 5px; etc.
+
         for selector in self.selector_keys:
             if selector in other.selector_keys:
                 # we care whether the set of declarations for the selector is the same
