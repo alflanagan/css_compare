@@ -10,7 +10,7 @@
 """
 from unittest import TestCase
 
-from ..comp_css import FunctionalDeclaration
+from comp_css import FunctionalDeclaration
 
 
 class FunctionalDeclarationTestCase(TestCase):
