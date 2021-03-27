@@ -16,7 +16,7 @@ coverage==4.0.3
     # via -r dev-requirements.in
 docutils==0.12
     # via sphinx
-jinja2==2.8
+jinja2==2.11.3
     # via sphinx
 lazy-object-proxy==1.2.1
     # via astroid
