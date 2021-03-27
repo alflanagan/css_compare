@@ -31,5 +31,7 @@ you can actually put them anywhere.)
 ```sh
 pip install --upate pip setuptools wheel pip-tools
 
+pip-compile *.in
+
 pip-sync requirements.txt dev-requirements.txt
 ```
